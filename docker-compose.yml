@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: codesage-db
+    environment:
+      POSTGRES_DB: codesage
+      POSTGRES_USER: codesage
+      POSTGRES_PASSWORD: codesage
+    ports:
+      - "5432:5432"
+    networks:
+      - codesage-net
+
+  api:
+    build: ./backend
+    container_name: codesage-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/codesage
+      SPRING_DATASOURCE_USERNAME: codesage
+      SPRING_DATASOURCE_PASSWORD: codesage
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      CODESAGE_HISTORY_ENABLED: "true"
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    networks:
+      - codesage-net
+
+  web:
+    build: ./web
+    container_name: codesage-web
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    networks:
+      - codesage-net
+
+networks:
+  codesage-net:
+    driver: bridge
