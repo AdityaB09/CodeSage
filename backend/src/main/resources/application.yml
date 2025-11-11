@@ -1,9 +1,9 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/codesage}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://neondb_owner:npg_lZcf0iGHrm1K@ep-tiny-firefly-a4jl8l3g-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require}
     username: ${SPRING_DATASOURCE_USERNAME:codesage}
     password: ${SPRING_DATASOURCE_PASSWORD:codesage}
   jpa:
