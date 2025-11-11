@@ -29,7 +29,20 @@ export type AnalysisHistoryItem = {
   createdAt: string;
 };
 
-const defaultCode = `public void bubbleSort(int[] arr) {
+type ExampleSnippet = {
+  id: string;
+  label: string;
+  language: string;
+  code: string;
+  description: string;
+};
+
+const EXAMPLES: ExampleSnippet[] = [
+  {
+    id: "java-bubble",
+    label: "Java – Bubble Sort (nested loops)",
+    language: "java",
+    code: `public void bubbleSort(int[] arr) {
     int n = arr.length;
     for (int i = 0; i < n; i++) {
         for (int j = 1; j < n; j++) {
@@ -40,11 +53,73 @@ const defaultCode = `public void bubbleSort(int[] arr) {
             }
         }
     }
-}`;
+}`,
+    description: "Shows nested loops and no obvious bugs → complexity high, performance smell."
+  },
+  {
+    id: "java-unused",
+    label: "Java – Unused variable",
+    language: "java",
+    code: `public int sum(int[] arr) {
+    int n = arr.length; // may be unused
+    int total = 0;
+    for (int value : arr) {
+        total += value;
+    }
+    return total;
+}`,
+    description: "Triggers unused-variable rule when 'n' is not used."
+  },
+  {
+    id: "java-null",
+    label: "Java – Possible null pointer",
+    language: "java",
+    code: `public String getUserName(User user) {
+    // user might be null here
+    if (user == null) {
+        return "guest";
+    }
+    // risky pattern: comment with null mention and getter
+    // TODO: handle null better
+    return user.getName();
+}`,
+    description: "Mentions 'null' and 'getName' → higher bug confidence."
+  },
+  {
+    id: "py-loop",
+    label: "Python – Simple loop",
+    language: "python",
+    code: `def count_positive(nums):
+    count = 0
+    for n in nums:
+        if n > 0:
+            count += 1
+    return count`,
+    description: "Python snippet with loop + if → different language handling."
+  },
+  {
+    id: "js-if",
+    label: "JavaScript – Conditional logic",
+    language: "javascript",
+    code: `function choosePlan(user) {
+    if (!user || !user.plan) {
+        return "free";
+    }
+    if (user.plan === "pro") {
+        return "pro";
+    }
+    return "basic";
+}`,
+    description: "JavaScript conditional branches, no obvious bugs."
+  }
+];
+
+const defaultExample = EXAMPLES[0];
 
 const App: React.FC = () => {
-  const [code, setCode] = useState<string>(defaultCode);
-  const [language, setLanguage] = useState<string>("java");
+  const [code, setCode] = useState<string>(defaultExample.code);
+  const [language, setLanguage] = useState<string>(defaultExample.language);
+  const [selectedExampleId, setSelectedExampleId] = useState<string>(defaultExample.id);
   const [mode, setMode] = useState<"developer" | "student">("developer");
   const [summary, setSummary] = useState<string>("");
   const [trace, setTrace] = useState<string[]>([]);
@@ -59,6 +134,28 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(true);
+
+  const clearOutputs = () => {
+    setSummary("");
+    setTrace([]);
+    setExplainConfidence(0);
+    setBugs([]);
+    setBugConfidence(0);
+    setLoc(0);
+    setComplexity(0);
+    setNestingDepth(0);
+    setReadability(0);
+    setSelectedBug(null);
+  };
+
+  const handleExampleChange = (id: string) => {
+    const ex = EXAMPLES.find((e) => e.id === id);
+    if (!ex) return;
+    setSelectedExampleId(id);
+    setLanguage(ex.language);
+    setCode(ex.code);
+    clearOutputs();
+  };
 
   const runAnalysis = async () => {
     setIsLoading(true);
@@ -119,6 +216,7 @@ const App: React.FC = () => {
     setSummary(item.summary);
     setExplainConfidence(item.explainConfidence);
     setBugConfidence(item.bugConfidence);
+    setSelectedExampleId("custom"); // history is not tied to built-in examples
   };
 
   return (
@@ -155,37 +253,62 @@ const App: React.FC = () => {
         </header>
 
         <main className="grid grid-cols-12 gap-4">
-          {/* Left: Editor + language selector */}
+          {/* Left: Editor + language + examples */}
           <section className="col-span-12 md:col-span-5 flex flex-col gap-3">
             <div className={`${darkMode ? "bg-panel" : "bg-white"} border border-borderSoft rounded-2xl p-3 h-full flex flex-col`}>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-start justify-between mb-2 gap-3">
                 <div>
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-textMuted">
                     Code
                   </h2>
                   <p className="text-xs text-textMuted">
-                    Paste your snippet and select language.
+                    Paste your snippet, or pick an example, then select language if needed.
                   </p>
                 </div>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="text-xs rounded-lg border border-borderSoft bg-panelSoft px-2 py-1"
-                >
-                  <option value="java">Java</option>
-                  <option value="python">Python</option>
-                  <option value="javascript">JavaScript</option>
-                </select>
+                <div className="flex flex-col items-end gap-1">
+                  <select
+                    value={selectedExampleId}
+                    onChange={(e) => handleExampleChange(e.target.value)}
+                    className="text-xs rounded-lg border border-borderSoft bg-panelSoft px-2 py-1"
+                  >
+                    {EXAMPLES.map((ex) => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.label}
+                      </option>
+                    ))}
+                    <option value="custom">– Custom –</option>
+                  </select>
+                  <select
+                    value={language}
+                    onChange={(e) => {
+                      setLanguage(e.target.value);
+                      setSelectedExampleId("custom");
+                    }}
+                    className="text-xs rounded-lg border border-borderSoft bg-panelSoft px-2 py-1"
+                  >
+                    <option value="java">Java</option>
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                  </select>
+                </div>
               </div>
               <div className="flex-1 min-h-[260px] rounded-xl overflow-hidden border border-borderSoft">
                 <CodeEditor
                   code={code}
                   language={language}
-                  onChange={(val) => setCode(val ?? "")}
+                  onChange={(val) => {
+                    setCode(val ?? "");
+                    setSelectedExampleId("custom");
+                  }}
                   bugs={bugs}
                   selectedBug={selectedBug}
                 />
               </div>
+              {selectedExampleId !== "custom" && (
+                <p className="mt-2 text-[11px] text-textMuted">
+                  Example info: {EXAMPLES.find((e) => e.id === selectedExampleId)?.description}
+                </p>
+              )}
             </div>
           </section>
 

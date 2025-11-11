@@ -50,7 +50,7 @@ public class AnalysisService {
         double explainConf = mlAnalysisService.estimateExplainConfidence(code);
         double bugConf = mlAnalysisService.estimateBugConfidence(code);
 
-        List<String> trace = new ArrayList<>(mlAnalysisService.buildBaseTrace(language));
+        List<String> trace = new ArrayList<>(mlAnalysisService.buildBaseTrace(language, mode));
         trace.add("Structural metrics → LOC: " + loc + ", complexity: " + complexity + ", nesting depth: " + depth + ".");
         trace.add("Explanation confidence estimated at " + String.format("%.2f", explainConf) + ".");
 
